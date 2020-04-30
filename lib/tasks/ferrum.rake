@@ -1,8 +1,7 @@
 task(:scrape) do
   browser = Ferrum::Browser.new({
     :browser_options => { "no-sandbox": true },
-    :timeout => 30,
-    :slowmo => 0.25
+    :timeout => 30
   })
 
   browser.goto("https://www.senate.gov/senators/contact")
@@ -31,34 +30,41 @@ task(:scrape) do
 
     senator_contact_url = contact_page_link.attribute(:href)
     
-    contact_page_browser = Ferrum::Browser.new({
-      :browser_options => { "no-sandbox": true },
-      :timeout => 30,
-      :slowmo => 2
-    })    
+    begin
+      contact_page_browser = Ferrum::Browser.new({
+        :browser_options => { "no-sandbox": true },
+        :timeout => 30
+      })    
 
-    contact_page_browser.goto(senator_contact_url)
+      contact_page_browser.goto(senator_contact_url)
 
-    all_twitter_links = contact_page_browser.css('[href*="twitter.com"]')
+      all_twitter_links = contact_page_browser.css('[href*="twitter.com"]')
 
-    # Create a blank array to hold any URLs that lead to Twitter
-    twitter_urls = Array.new
+      # Create a blank array to hold any URLs that lead to Twitter
+      twitter_urls = Array.new
 
-    all_twitter_links.each do |twitter_link|
-      # Drop the ones that lead to tweets
-      if twitter_link.attribute(:href).exclude?("/status/")
-        # Keep the ones that probably lead to profiles
-        twitter_urls.push(twitter_link.attribute(:href))
+      all_twitter_links.each do |twitter_link|
+        # Drop the ones that lead to tweets
+        if twitter_link.attribute(:href).exclude?("/status/")
+          # Keep the ones that probably lead to profiles
+          twitter_urls.push(twitter_link.attribute(:href).downcase)
+        end
       end
+
+      senator.store(:handles, twitter_urls.uniq)
+      
+      all_senators.push(senator)
+
+      p senator
+
+      contact_page_browser.quit
+    rescue => error
+      senator.store(:handles, [error.message])
+
+      all_senators.push(senator)
+
+      p senator
     end
-
-    senator.store(:handles, twitter_urls)
-    
-    all_senators.push(senator)
-
-    p senator
-
-    contact_page_browser.quit
   end
 
   p all_senators

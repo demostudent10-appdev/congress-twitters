@@ -1,4 +1,4 @@
-task :mechanize do
+task(:mechanize) do
   agent = Mechanize.new
   senate_page = agent.get('https://www.senate.gov/senators/contact')
 
@@ -40,15 +40,15 @@ task :mechanize do
         # Drop the ones that lead to tweets
         if twitter_link.href.exclude?("/status/")
           # Keep the ones that probably lead to profiles
-          twitter_urls.push(twitter_link.href)
+          twitter_urls.push(twitter_link.href.downcase)
         end
       end
 
-      senator.store(:handles, twitter_urls)
+      senator.store(:handles, twitter_urls.uniq)
     rescue => error
       # If one senator's page is down and causes an error, we'll store
       #   the error message instead.
-      senator.store(:handles, error.message)
+      senator.store(:handles, [error.message])
     end
     
     all_senators.push(senator)
